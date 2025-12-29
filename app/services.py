@@ -31,6 +31,25 @@ FR_CONFIG = {
     "CELL_TOK_ID": 4
 }
 
+# ✅ [추가] 데모용 Pathway 데이터베이스 (주요 암 관련 경로 매핑)
+GENE_PATHWAY_MAP = {
+    "EGFR": "RTK Signaling", "KRAS": "MAPK Signaling", "BRAF": "MAPK Signaling",
+    "PIK3CA": "PI3K-Akt Signaling", "PTEN": "PI3K-Akt Signaling", "AKT1": "PI3K-Akt Signaling",
+    "TP53": "p53 Signaling / Cell Cycle", "CDKN2A": "Cell Cycle", "RB1": "Cell Cycle",
+    "APC": "Wnt Signaling", "CTNNB1": "Wnt Signaling",
+    "SMAD4": "TGF-beta Signaling", "TGFBR2": "TGF-beta Signaling",
+    "BRCA1": "DNA Repair", "BRCA2": "DNA Repair",
+    "MYC": "Cell Growth & Proliferation",
+    "VEGFA": "Angiogenesis", "VIM": "EMT (Metastasis)", "FN1": "EMT (Metastasis)",
+    "MALAT1": "Transcriptional Regulation", "NEAT1": "Nuclear Structure",
+    "MT-RNR1": "Metabolic Process", "GAPDH": "Metabolic Process",
+    "TNF": "Inflammation", "IL6": "Inflammation",
+    "TRIO": "Cytoskeleton Organization", "ASPH": "Cell Motility",
+    "HSP90B1": "Protein Folding (Stress Response)", "EXT1": "Heparan Sulfate Biosynthesis",
+    "SPARC": "Extracellular Matrix Organization", "PDE4D": "cAMP Signaling",
+    # ... 필요시 더 추가 ...
+}
+
 # ------------------------------------------------------------------------------
 # SERVICE CLASS
 # ------------------------------------------------------------------------------
@@ -158,6 +177,7 @@ class IntegratedService:
             _, z_pred = self.model_fp(inp, val, msk, organ_id=org, return_smiles=True)
         return z_pred.cpu().numpy().tolist()[0]
 
+    # 🛠️ [수정됨] 시뮬레이션 + Pathway 분석 기능 통합
     def simulate_drug_response(self, gene_names, gene_values, drug_vector):
         if self.model_fr is None: return None
 
@@ -184,10 +204,12 @@ class IntegratedService:
         
         delta_np = delta_pred.cpu().numpy()[0] 
 
-        # 3. [수정됨] 결과 매핑 (Target_Gene_X -> 실제 유전자 이름)
-        result = {}
-        # 변화량이 큰 상위 15개만 추출
-        top_idx = np.argsort(np.abs(delta_np))[::-1][:15]
+        # 3. [수정됨] 결과 매핑 및 Pathway 분석
+        result_genes = {}
+        pathway_counts = {} # Pathway 카운터
+
+        # 변화량이 큰 상위 20개만 추출
+        top_idx = np.argsort(np.abs(delta_np))[::-1][:20]
         
         for i in top_idx:
             val = float(delta_np[i])
@@ -199,6 +221,24 @@ class IntegratedService:
                 if tahoe_id in self.tahoe_id_to_symbol:
                     gene_name = self.tahoe_id_to_symbol[tahoe_id] # 실제 이름 (예: EGFR)
             
-            result[gene_name] = val
+            result_genes[gene_name] = val
 
-        return result
+            # ✅ Pathway 분석 로직
+            # 1) 사전에 있는 경우
+            if gene_name in GENE_PATHWAY_MAP:
+                pathway = GENE_PATHWAY_MAP[gene_name]
+                pathway_counts[pathway] = pathway_counts.get(pathway, 0) + abs(val)
+            # 2) 사전에 없지만 리보솜/미토콘드리아 관련 (Rule-based)
+            elif gene_name.startswith("MT-") or gene_name.startswith("RPL") or gene_name.startswith("RPS"):
+                pathway_counts["Translation & Metabolism"] = pathway_counts.get("Translation & Metabolism", 0) + abs(val)
+            # 3) 기타
+            else:
+                pathway_counts["Unknown/Novel Pathway"] = pathway_counts.get("Unknown/Novel Pathway", 0) + abs(val)
+
+        # Pathway 정렬 (영향력 큰 순서)
+        sorted_pathways = dict(sorted(pathway_counts.items(), key=lambda item: item[1], reverse=True))
+
+        return {
+            "top_genes": result_genes,      # 기존 결과 (유전자별 변화)
+            "pathways": sorted_pathways     # 신규 결과 (Pathway 분석)
+        }
