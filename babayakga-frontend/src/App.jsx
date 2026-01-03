@@ -149,15 +149,41 @@ const getGeneDesc = (geneName) => {
   return "세포 대사 및 발현 조절 네트워크의 주요 인자";
 };
 
+// 경로별 설명이 중복되지 않도록 상세 분리
 const getPathwayInsight = (pathway) => {
-    if (pathway.includes("Signaling")) return "암세포의 증식 및 생존 신호 전달 체계를 억제합니다.";
-    if (pathway.includes("Metabolism") || pathway.includes("Metabolic")) return "암세포의 에너지 대사 효율을 떨어뜨려 성장을 저해합니다.";
-    if (pathway.includes("Metastasis") || pathway.includes("EMT") || pathway.includes("Motility")) return "세포 이동성을 감소시켜 다른 장기로의 전이를 억제합니다.";
-    if (pathway.includes("Transcriptional") || pathway.includes("Nuclear")) return "암 유발 유전자의 발현을 조절하는 전사 기전에 관여합니다.";
-    if (pathway.includes("Cycle")) return "무분별한 세포 분열 주기를 차단합니다.";
-    if (pathway.includes("Immune") || pathway.includes("Inflammation")) return "종양 미세환경 내의 면역 반응을 조절합니다.";
-    if (pathway.includes("Translation") || pathway.includes("Folding")) return "단백질 합성 및 안정화 과정을 교란하여 암세포에 스트레스를 줍니다.";
-    return "세포 생존에 필수적인 주요 생물학적 기능을 조절합니다.";
+    // 1. 전사 조절 (Transcriptional Regulation)
+    if (pathway.includes("Transcriptional")) 
+        return "전사 인자(Transcription Factor)의 결합을 방해하여, 암세포 증식에 필수적인 유전자가 mRNA로 만들어지는 단계를 원천 차단합니다.";
+    
+    // 2. 핵 구조 (Nuclear Structure) - 전사와 분리됨!
+    if (pathway.includes("Nuclear")) 
+        return "핵 내 크로마틴 구조나 파라스페클(Paraspeckle) 형성을 교란하여, 유전체 안정성을 무너뜨리고 암세포의 생존 환경을 악화시킵니다.";
+
+    // 3. 번역 및 단백질 합성 (Translation) - 대사와 분리됨!
+    if (pathway.includes("Translation") || pathway.includes("Folding")) 
+        return "리보솜의 단백질 합성 과정을 억제하거나 잘못된 단백질 축적(Proteotoxic Stress)을 유도하여, 암세포가 스스로 사멸하게 만듭니다.";
+
+    // 4. 대사 과정 (Metabolism)
+    if (pathway.includes("Metabolism") || pathway.includes("Metabolic")) 
+        return "암세포 특유의 과도한 에너지 소비 경로(Warburg Effect)를 표적하여, 급격한 성장에 필요한 영양분 공급을 끊습니다.";
+
+    // 5. 신호 전달 (Signaling)
+    if (pathway.includes("Signaling")) 
+        return "암세포의 증식과 생존 명령을 전달하는 신호 네트워크를 차단하여, 세포 분열을 멈추게 합니다.";
+
+    // 6. 전이 및 이동 (Metastasis/EMT)
+    if (pathway.includes("Metastasis") || pathway.includes("EMT") || pathway.includes("Motility")) 
+        return "세포의 이동성을 부여하는 상피-간엽 이행(EMT) 과정을 억제하여, 암세포가 다른 장기로 전이되는 것을 막습니다.";
+
+    // 7. 세포 주기 (Cell Cycle)
+    if (pathway.includes("Cycle")) 
+        return "통제되지 않는 세포 분열 주기를 강제로 멈추게 하여(Cell Cycle Arrest), 종양의 크기 증가를 억제합니다.";
+
+    // 8. 면역 및 염증 (Immune)
+    if (pathway.includes("Immune") || pathway.includes("Inflammation")) 
+        return "종양 미세환경 내의 염증 반응을 조절하고, 면역 세포가 암세포를 더 잘 공격할 수 있도록 돕습니다.";
+    
+    return "세포 생존에 필수적인 주요 생물학적 네트워크를 조절하여 복합적인 항암 효과를 나타냅니다.";
 };
 
 // ==============================================================================
